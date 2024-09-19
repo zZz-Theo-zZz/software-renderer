@@ -1,4 +1,5 @@
 ﻿#include "tgaimage.h"
+#include "model.h"
 #include <iostream>
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
@@ -8,8 +9,6 @@ const TGAColor blue = TGAColor(0, 0, 255, 255);
 
 void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color)
 {
-    int startx = x0;
-    int starty = y0;
     int endx = x1;
     int endy = y1;
 
@@ -52,26 +51,29 @@ void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color)
             y += increment;
         }
     }
-
-    image.set(startx, starty, green);
-    image.set(endx, endy, red);
 }
 
 int main(int argc, char** argv)
 {
-    TGAImage image(100, 100, TGAImage::RGB);
-    image.set(0, 0, blue);
-    image.set(99, 99, blue);
+    int windowWidth = 1000;
+    int windowHeight = 1000;
 
-    line(50, 50, 90, 50, image, {255, 128, 0, 255}); // orange
-    line(50, 50, 90, 70, image, {255, 128, 0, 255}); // orange
-    line(50, 50, 90, 10, image, {102, 0, 204, 255}); // purple
-    line(90, 10, 50, 50, image, {204, 0, 102, 255 }); // purple
-    line(50, 50, 90, 90, image, {255, 255, 0, 255}); // yellow
+    TGAImage image(windowWidth, windowHeight, TGAImage::RGB);
 
-    line(50, 50, 10, 90, image, {255, 153, 255, 255}); // pink
-    line(50, 50, 10, 10, image, white);
+    Model model("african_head.obj");
 
+    for (int i = 0; i < model.nfaces(); i++) {
+        std::vector<int> face = model.face(i);
+        for (int j = 0; j < 3; j++) {
+            Vec3f v0 = model.vert(face[j]);
+            Vec3f v1 = model.vert(face[(j + 1) % 3]);
+            int x0 = (v0.x + 1.) * windowWidth / 2.;
+            int y0 = (v0.y + 1.) * windowHeight / 2.;
+            int x1 = (v1.x + 1.) * windowWidth / 2.;
+            int y1 = (v1.y + 1.) * windowHeight / 2.;
+            line(x0, y0, x1, y1, image, white);
+        }
+    }
 
     image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
     image.write_tga_file("output.tga");
