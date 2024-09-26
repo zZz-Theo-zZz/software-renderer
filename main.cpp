@@ -152,21 +152,31 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
 
 int main(int argc, char** argv)
 {
-    int windowWidth = 1000;
-    int windowHeight = 1000;
+    int windowWidth = 2000;
+    int windowHeight = 2000;
 
     TGAImage image(windowWidth, windowHeight, TGAImage::RGB);
 
     Model model("african_head.obj");
 
+    Vec3f lightDirection = { 0.f, 0.f, -1};
+
     for (int i = 0; i < model.nfaces(); i++) {
         std::vector<int> face = model.face(i);
         Vec2i screen_coords[3];
+        Vec3f world_coords[3];
         for (int j = 0; j < 3; j++) {
-            Vec3f world_coords = model.vert(face[j]);
-            screen_coords[j] = Vec2i((world_coords.x + 1.) * windowWidth / 2., (world_coords.y + 1.) * windowHeight/ 2.);
+            Vec3f vertex = model.vert(face[j]);
+            screen_coords[j] = Vec2i((vertex.x + 1.) * windowWidth / 2., (vertex.y + 1.) * windowHeight/ 2.);
+            world_coords[j] = vertex;
         }
-        triangle2(screen_coords, image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
+
+        Vec3f normal = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
+        normal.normalize();
+
+        float lightIntensity = normal * lightDirection;
+        if (lightIntensity > 0.0f)
+            triangle2(screen_coords, image, TGAColor(255 * lightIntensity, 255 * lightIntensity, 255 * lightIntensity, 255));
     }
 
     image.flip_vertically();
