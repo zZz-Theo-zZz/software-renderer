@@ -1,7 +1,7 @@
 ﻿#include "tgaimage.h"
 #include "model.h"
 #include <iostream>
-#include <limits>
+#include <cmath>
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
@@ -59,13 +59,63 @@ void line(Vec2i a, Vec2i b, TGAImage& image, TGAColor color)
     line(a.x, a.y, b.x, b.y, image, color);
 }
 
+void boundingbox(Vec2i t0, Vec2i t1, Vec2i t2, Vec2i windowSize, Vec2i& min, Vec2i& max)
+{
+    min = { std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+    max = { 0, 0 };
+
+    min = { std::min(t0.x, min.x), std::min(t0.y, min.y) };
+    min = { std::min(t1.x, min.x), std::min(t1.y, min.y) };
+    min = { std::min(t2.x, min.x), std::min(t2.y, min.y) };
+
+    max = { std::max(t0.x, max.x), std::max(t0.y, max.y) };
+    max = { std::max(t1.x, max.x), std::max(t1.y, max.y) };
+    max = { std::max(t2.x, max.x), std::max(t2.y, max.y) };
+
+    min = { std::max(min.x, 0), std::max(min.y, 0) };
+    max = { std::min(max.x, windowSize.x), std::min(max.y, windowSize.y) };
+}
+
+int dot(const Vec2i& a, const Vec2i& b)
+{
+    return a.x * b.x + a.y * b.y;
+}
+
+int crossProduct(const Vec2i& a, const Vec2i& b)
+{
+    return a.x * b.y - b.x * a.y;
+}
+
+bool insideTriangle(Vec2i point, Vec2i t[3])
+{
+    bool a = crossProduct(point - t[2], t[1] - t[2]) <= 0;
+    bool b = crossProduct(point - t[1], t[0] - t[1]) <= 0;
+    bool c = crossProduct(point - t[0], t[2] - t[0]) <= 0;
+    
+    return a == b && b == c;
+}
+
+void triangle2(Vec2i triangle[3], TGAImage& image, TGAColor color)
+{
+    Vec2i min, max;
+    boundingbox(triangle[0], triangle[1], triangle[2], {image.get_width(), image.get_height()}, min, max);
+
+    for (int x = min.x; x <= max.x; ++x)
+    {
+        for (int y = min.y; y <= max.y; ++y)
+        {
+            if (insideTriangle({x, y}, triangle))
+                image.set(x, y, color);
+        }
+    }
+}
+
 void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
 {
     line(t0, t1, image, { 122, 25, 200, 255 });
     line(t1, t2, image, { 122, 25, 200, 255 });
     line(t2, t0, image, { 122, 25, 200, 255 });
 
-    // sorting vertices by ascending y
     if (t0.y > t1.y)
         std::swap(t0, t1);
 
@@ -75,9 +125,6 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
     if (t1.y > t2.y)
         std::swap(t1, t2);    
 
-    // fill bottom and upper triangle with line drawing algorithm
-    // first triangle is t1, t2, t3
-    // we go up the line t1,t2 and t3, t2
     float invSlope1 = (t2.x - t1.x) / float(t2.y - t1.y);
     float invSlope2 = (t2.x - t0.x) / float(t2.y - t0.y);
 
@@ -105,32 +152,22 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
 
 int main(int argc, char** argv)
 {
-    int windowWidth = 200;
-    int windowHeight = 200;
+    int windowWidth = 1000;
+    int windowHeight = 1000;
 
     TGAImage image(windowWidth, windowHeight, TGAImage::RGB);
 
-    //Model model("african_head.obj");
+    Model model("african_head.obj");
 
-    //for (int i = 0; i < model.nfaces(); i++) {
-    //    std::vector<int> face = model.face(i);
-    //    for (int j = 0; j < 3; j++) {
-    //        Vec3f v0 = model.vert(face[j]);
-    //        Vec3f v1 = model.vert(face[(j + 1) % 3]);
-    //        int x0 = (v0.x + 1.) * windowWidth / 2.;
-    //        int y0 = (v0.y + 1.) * windowHeight / 2.;
-    //        int x1 = (v1.x + 1.) * windowWidth / 2.;
-    //        int y1 = (v1.y + 1.) * windowHeight / 2.;
-    //        line(x0, y0, x1, y1, image, white);
-    //    }
-    //}
-
-    Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
-    Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
-    Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
-    triangle(t0[0], t0[1], t0[2], image, red);
-    triangle(t1[0], t1[1], t1[2], image, white);
-    triangle(t2[0], t2[1], t2[2], image, green);
+    for (int i = 0; i < model.nfaces(); i++) {
+        std::vector<int> face = model.face(i);
+        Vec2i screen_coords[3];
+        for (int j = 0; j < 3; j++) {
+            Vec3f world_coords = model.vert(face[j]);
+            screen_coords[j] = Vec2i((world_coords.x + 1.) * windowWidth / 2., (world_coords.y + 1.) * windowHeight/ 2.);
+        }
+        triangle2(screen_coords, image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
+    }
 
     image.flip_vertically();
     image.write_tga_file("output.tga");
