@@ -97,6 +97,10 @@ bool insideTriangle(Vec2i point, Vec2i t[3])
 
 void triangle2(Vec2i triangle[3], TGAImage& image, TGAColor color)
 {
+    line(triangle[0], triangle[1], image, color);
+    line(triangle[1], triangle[2], image, color);
+    line(triangle[2], triangle[0], image, color);
+
     Vec2i min, max;
     boundingbox(triangle[0], triangle[1], triangle[2], {image.get_width(), image.get_height()}, min, max);
 
@@ -106,6 +110,37 @@ void triangle2(Vec2i triangle[3], TGAImage& image, TGAColor color)
         {
             if (insideTriangle({x, y}, triangle))
                 image.set(x, y, color);
+        }
+    }
+}
+
+void triangle3(Vec2i t[3], TGAImage& image, TGAColor color)
+{
+    Vec2i min, max;
+    boundingbox(t[0], t[1], t[2], { image.get_width(), image.get_height() }, min, max);
+
+    for (int x = min.x; x <= max.x; ++x)
+    {
+        for (int y = min.y; y <= max.y; ++y)
+        {
+            float w1Denominator = ((t[1].y - t[0].y) * (t[2].x - t[0].x) - (t[1].x - t[0].x) * (t[2].y - t[0].y));
+            float w2Denominator = (t[2].y - t[0].y);
+
+            if (std::isnormal(w1Denominator) && std::isnormal(w2Denominator))
+            {
+                float w1 = (t[0].x * (t[2].y - t[0].y) + (y - t[0].y) * (t[2].x - t[0].x) - x * (t[2].y - t[0].y)) / w1Denominator;
+                float w2 = (y - t[0].y - w1 * (t[1].y - t[0].y)) / w2Denominator;
+
+                if (w1 >= 0.0f && w2 >= 0 && w1 + w2 <= 1.0f)
+                    image.set(x, y, color);
+            }
+            else
+            {
+                if (!std::isnormal(w1Denominator))
+                    image.set(x, y, { 255, 0, 0, 255 });
+                else
+                    image.set(x, y, { 0, 255, 0, 255 });
+            }
         }
     }
 }
@@ -176,7 +211,7 @@ int main(int argc, char** argv)
 
         float lightIntensity = normal * lightDirection;
         if (lightIntensity > 0.0f)
-            triangle2(screen_coords, image, TGAColor(255 * lightIntensity, 255 * lightIntensity, 255 * lightIntensity, 255));
+            triangle3(screen_coords, image, TGAColor(255 * lightIntensity, 255 * lightIntensity, 255 * lightIntensity, 255));
     }
 
     image.flip_vertically();
