@@ -59,18 +59,18 @@ void line(Vec2i a, Vec2i b, TGAImage& image, TGAColor color)
     line(a.x, a.y, b.x, b.y, image, color);
 }
 
-void boundingbox(Vec2i t0, Vec2i t1, Vec2i t2, Vec2i windowSize, Vec2i& min, Vec2i& max)
+void boundingbox(Vec3f t0, Vec3f t1, Vec3f t2, Vec2i windowSize, Vec2i& min, Vec2i& max)
 {
     min = { std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
     max = { 0, 0 };
 
-    min = { std::min(t0.x, min.x), std::min(t0.y, min.y) };
-    min = { std::min(t1.x, min.x), std::min(t1.y, min.y) };
-    min = { std::min(t2.x, min.x), std::min(t2.y, min.y) };
+    min = { (int)std::min<float>(t0.x, min.x), (int)std::min<float>(t0.y, min.y) };
+    min = { (int)std::min<float>(t1.x, min.x), (int)std::min<float>(t1.y, min.y) };
+    min = { (int)std::min<float>(t2.x, min.x), (int)std::min<float>(t2.y, min.y) };
 
-    max = { std::max(t0.x, max.x), std::max(t0.y, max.y) };
-    max = { std::max(t1.x, max.x), std::max(t1.y, max.y) };
-    max = { std::max(t2.x, max.x), std::max(t2.y, max.y) };
+    max = { (int)std::max<float>(t0.x, max.x), (int)std::max<float>(t0.y, max.y) };
+    max = { (int)std::max<float>(t1.x, max.x), (int)std::max<float>(t1.y, max.y) };
+    max = { (int)std::max<float>(t2.x, max.x), (int)std::max<float>(t2.y, max.y) };
 
     min = { std::max(min.x, 0), std::max(min.y, 0) };
     max = { std::min(max.x, windowSize.x), std::min(max.y, windowSize.y) };
@@ -95,101 +95,56 @@ bool insideTriangle(Vec2i point, Vec2i t[3])
     return a == b && b == c;
 }
 
-void triangle2(Vec2i triangle[3], TGAImage& image, TGAColor color)
-{
-    line(triangle[0], triangle[1], image, color);
-    line(triangle[1], triangle[2], image, color);
-    line(triangle[2], triangle[0], image, color);
-
-    Vec2i min, max;
-    boundingbox(triangle[0], triangle[1], triangle[2], {image.get_width(), image.get_height()}, min, max);
-
-    for (int x = min.x; x <= max.x; ++x)
-    {
-        for (int y = min.y; y <= max.y; ++y)
-        {
-            if (insideTriangle({x, y}, triangle))
-                image.set(x, y, color);
-        }
-    }
-}
-
-void triangle3(Vec2i t[3], TGAImage& image, TGAColor color)
+void triangle(Vec3f t[3], float* depthBuffer, TGAImage& image, TGAColor color)
 {
     Vec2i min, max;
-    Vec2i a = t[0];
-    Vec2i b = t[1];
-    Vec2i c = t[2];
+    Vec3f a = t[0];
+    Vec3f b = t[1];
+    Vec3f c = t[2];
 
     boundingbox(a, b, c, { image.get_width(), image.get_height() }, min, max);
 
     if (c.y == a.y)
         std::swap(a, b);
 
-    float w1Denominator = ((b.y - a.y) * (c.x - a.x) - (b.x - a.x) * (c.y - a.y));
-    float w2Denominator = (c.y - a.y);
+    float alphaDenominator = ((b.y - a.y) * (c.x - a.x) - (b.x - a.x) * (c.y - a.y));
+    float betaDenominator = (c.y - a.y);
 
-    if (std::isnormal(w1Denominator))
+    if (std::isnormal(alphaDenominator))
     {
         for (int x = min.x; x <= max.x; ++x)
         {
             for (int y = min.y; y <= max.y; ++y)
             {
-                float w1 = (a.x * (c.y - a.y) + (y - a.y) * (c.x - a.x) - x * (c.y - a.y)) / w1Denominator;
-                float w2 = (y - a.y - w1 * (b.y - a.y)) / w2Denominator;
-                float w3 = 1.0f - w1 - w2;
+                float alpha = (a.x * (c.y - a.y) + (y - a.y) * (c.x - a.x) - x * (c.y - a.y)) / alphaDenominator;
+                float beta = (y - a.y - alpha * (b.y - a.y)) / betaDenominator;
+                float sigma = 1.0f - alpha - beta;
 
-                if (w1 >= 0.0f && w2 >= 0.0f && w3 >= 0.0f)
-                    image.set(x, y, color);
+                if (sigma >= 0.0f && alpha >= 0.0f && beta >= 0.0f)
+                {
+                    float depth = a.z * sigma + alpha * b.z + beta * c.z;
+
+                    if (depthBuffer[y * image.get_width() + x] < depth)
+                    {
+                        depthBuffer[y * image.get_width() + x] = depth;
+
+                        depth = (depth + 1.0f) * 0.5f * 255.0f;
+                        image.set(x, y, TGAColor(depth, depth, depth, 255));
+                    }
+                }
             }
         }
     }
 }
 
-void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, TGAColor color)
-{
-    line(t0, t1, image, { 122, 25, 200, 255 });
-    line(t1, t2, image, { 122, 25, 200, 255 });
-    line(t2, t0, image, { 122, 25, 200, 255 });
-
-    if (t0.y > t1.y)
-        std::swap(t0, t1);
-
-    if (t0.y > t2.y)
-        std::swap(t0, t2);
-
-    if (t1.y > t2.y)
-        std::swap(t1, t2);    
-
-    float invSlope1 = (t2.x - t1.x) / float(t2.y - t1.y);
-    float invSlope2 = (t2.x - t0.x) / float(t2.y - t0.y);
-
-    float edge1 = t2.x;
-    float edge2 = t2.x;
-
-    int y;
-    for (y = t2.y; y > t1.y; --y)
-    {
-        line({ (int)std::round(edge1), y }, { (int)std::round(edge2), y }, image, color);
-
-        edge1 -= invSlope1;
-        edge2 -= invSlope2;
-    }
-
-    float invSlope3 = (t1.x - t0.x) / float(t1.y - t0.y);
-    for (int y = t1.y; y >= t0.y; --y)
-    {
-        line({ (int)std::round(edge1), y }, { (int)std::round(edge2), y }, image, color);
-
-        edge1 -= invSlope3;
-        edge2 -= invSlope2;
-    }
-}
-
 int main(int argc, char** argv)
 {
-    int windowWidth = 2000;
-    int windowHeight = 2000;
+    const int windowWidth = 2000;
+    const int windowHeight = 2000;
+
+    float* depthBuffer = new float[windowWidth * windowHeight];
+    for (int i = 0; i < windowHeight * windowWidth; ++i)
+        depthBuffer[i] = -1000000000.0f;
 
     TGAImage image(windowWidth, windowHeight, TGAImage::RGB);
 
@@ -199,11 +154,11 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < model.nfaces(); i++) {
         std::vector<int> face = model.face(i);
-        Vec2i screen_coords[3];
+        Vec3f screen_coords[3];
         Vec3f world_coords[3];
         for (int j = 0; j < 3; j++) {
             Vec3f vertex = model.vert(face[j]);
-            screen_coords[j] = Vec2i((vertex.x + 1.) * windowWidth / 2., (vertex.y + 1.) * windowHeight/ 2.);
+            screen_coords[j] = Vec3f((vertex.x + 1.) * windowWidth / 2., (vertex.y + 1.) * windowHeight/ 2., vertex.z);
             world_coords[j] = vertex;
         }
 
@@ -212,10 +167,12 @@ int main(int argc, char** argv)
 
         float lightIntensity = normal * lightDirection;
         if (lightIntensity > 0.0f)
-            triangle3(screen_coords, image, TGAColor(255 * lightIntensity, 255 * lightIntensity, 255 * lightIntensity, 255));
+            triangle(screen_coords, depthBuffer, image, TGAColor(255 * lightIntensity, 255 * lightIntensity, 255 * lightIntensity, 255));
     }
 
     image.flip_vertically();
     image.write_tga_file("output.tga");
+
+    delete[] depthBuffer;
     return 0;
 }
