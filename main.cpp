@@ -117,29 +117,29 @@ void triangle2(Vec2i triangle[3], TGAImage& image, TGAColor color)
 void triangle3(Vec2i t[3], TGAImage& image, TGAColor color)
 {
     Vec2i min, max;
-    boundingbox(t[0], t[1], t[2], { image.get_width(), image.get_height() }, min, max);
+    Vec2i t0 = t[0];
+    Vec2i t1 = t[1];
+    Vec2i t2 = t[2];
 
-    for (int x = min.x; x <= max.x; ++x)
+    boundingbox(t0, t1, t2, { image.get_width(), image.get_height() }, min, max);
+
+    if (t2.y == t0.y)
+        std::swap(t0, t1);
+
+    float w1Denominator = ((t1.y - t0.y) * (t2.x - t0.x) - (t1.x - t0.x) * (t2.y - t0.y));
+    float w2Denominator = (t2.y - t0.y);
+
+    if (std::isnormal(w1Denominator))
     {
-        for (int y = min.y; y <= max.y; ++y)
+        for (int x = min.x; x <= max.x; ++x)
         {
-            float w1Denominator = ((t[1].y - t[0].y) * (t[2].x - t[0].x) - (t[1].x - t[0].x) * (t[2].y - t[0].y));
-            float w2Denominator = (t[2].y - t[0].y);
-
-            if (std::isnormal(w1Denominator) && std::isnormal(w2Denominator))
+            for (int y = min.y; y <= max.y; ++y)
             {
-                float w1 = (t[0].x * (t[2].y - t[0].y) + (y - t[0].y) * (t[2].x - t[0].x) - x * (t[2].y - t[0].y)) / w1Denominator;
-                float w2 = (y - t[0].y - w1 * (t[1].y - t[0].y)) / w2Denominator;
+                float w1 = (t0.x * (t2.y - t0.y) + (y - t0.y) * (t2.x - t0.x) - x * (t2.y - t0.y)) / w1Denominator;
+                float w2 = (y - t0.y - w1 * (t1.y - t0.y)) / w2Denominator;
 
-                if (w1 >= 0.0f && w2 >= 0 && w1 + w2 <= 1.0f)
+                if (w1 >= 0.0f && w2 >= 0.0f && w1 + w2 <= 1.0f)
                     image.set(x, y, color);
-            }
-            else
-            {
-                if (!std::isnormal(w1Denominator))
-                    image.set(x, y, { 255, 0, 0, 255 });
-                else
-                    image.set(x, y, { 0, 255, 0, 255 });
             }
         }
     }
