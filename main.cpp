@@ -95,7 +95,7 @@ bool insideTriangle(Vec2i point, Vec2i t[3])
     return a == b && b == c;
 }
 
-void triangle(Vec3f vertices[3], Vec2f uv[3], float* depthBuffer, TGAImage& diffuseMap, TGAImage& output)
+void triangle(Vec3f vertices[3], Vec2f uv[3], float* depthBuffer, TGAImage& diffuseMap, float light, TGAImage& output)
 {
     Vec2i min, max;
     Vec3f a = vertices[0];
@@ -144,7 +144,7 @@ void triangle(Vec3f vertices[3], Vec2f uv[3], float* depthBuffer, TGAImage& diff
 
                         depth = (depth + 1.0f) * 0.5f;
 
-                        output.set(x, y, sampledColor);
+                        output.set(x, y, sampledColor * light);
                     }
                 }
             }
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
 
         float lightIntensity = normal * lightDirection;
         if (lightIntensity > 0.0f)
-            triangle(screen_coords, uv, depthBuffer, diffuseMap, image);
+            triangle(screen_coords, uv, depthBuffer, diffuseMap, lightIntensity, image);
     }
 
     image.flip_vertically();
