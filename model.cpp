@@ -20,17 +20,26 @@ Model::Model(const char *filename) : verts_(), faces_() {
             for (int i=0;i<3;i++) iss >> v.raw[i];
             verts_.push_back(v);
         } else if (!line.compare(0, 2, "f ")) {
-            std::vector<int> f;
-            int itrash, idx;
+            std::vector<VertexInfo> f;
+            VertexInfo vertex;
+            int itrash;
             iss >> trash;
-            while (iss >> idx >> trash >> itrash >> trash >> itrash) {
-                idx--; // in wavefront obj all indices start at 1, not zero
-                f.push_back(idx);
+            while (iss >> vertex.VertexId >> trash >> vertex.TexCoordId >> trash >> itrash) {
+                vertex.VertexId--; // in wavefront obj all indices start at 1, not zero
+                vertex.TexCoordId--;
+                f.push_back(vertex);
             }
             faces_.push_back(f);
+        } else if (!line.compare(0, 3, "vt ")) {
+            iss >> trash >> trash;
+            Vec2f uv;
+            iss >> uv.x;
+            iss >> uv.y;
+
+            uv_.push_back(uv);
         }
     }
-    std::cerr << "# v# " << verts_.size() << " f# "  << faces_.size() << std::endl;
+    std::cerr << "# v# " << verts_.size() << "# uv# " << uv_.size() << " f# " << faces_.size() << std::endl;
 }
 
 Model::~Model() {
@@ -44,11 +53,21 @@ int Model::nfaces() {
     return (int)faces_.size();
 }
 
-std::vector<int> Model::face(int idx) {
+int Model::nuv()
+{
+    return (int)uv_.size();
+}
+
+std::vector<VertexInfo> Model::face(int idx) {
     return faces_[idx];
 }
 
 Vec3f Model::vert(int i) {
     return verts_[i];
+}
+
+Vec2f Model::uv(int i)
+{
+    return uv_[i];
 }
 

@@ -57,6 +57,9 @@ struct TGAColor {
 		}
 		return *this;
 	}
+
+	TGAColor operator*(float factor);
+	TGAColor operator+(const TGAColor& color);
 };
 
 

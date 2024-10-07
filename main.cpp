@@ -95,14 +95,20 @@ bool insideTriangle(Vec2i point, Vec2i t[3])
     return a == b && b == c;
 }
 
-void triangle(Vec3f t[3], float* depthBuffer, TGAImage& image, TGAColor color)
+void triangle(Vec3f vertices[3], Vec2f uv[3], float* depthBuffer, TGAImage& diffuseMap, TGAImage& output)
 {
     Vec2i min, max;
-    Vec3f a = t[0];
-    Vec3f b = t[1];
-    Vec3f c = t[2];
+    Vec3f a = vertices[0];
+    Vec3f b = vertices[1];
+    Vec3f c = vertices[2];
 
-    boundingbox(a, b, c, { image.get_width(), image.get_height() }, min, max);
+    int width = output.get_width();
+    int height = output.get_height();
+
+    float diffuseHeight = diffuseMap.get_height();
+    float diffuseWidth = diffuseMap.get_width();
+
+    boundingbox(a, b, c, { width, height }, min, max);
 
     if (c.y == a.y)
         std::swap(a, b);
@@ -124,12 +130,21 @@ void triangle(Vec3f t[3], float* depthBuffer, TGAImage& image, TGAColor color)
                 {
                     float depth = a.z * sigma + alpha * b.z + beta * c.z;
 
-                    if (depthBuffer[y * image.get_width() + x] < depth)
+                    if (depthBuffer[y * width + x] < depth)
                     {
-                        depthBuffer[y * image.get_width() + x] = depth;
+                        depthBuffer[y * width + x] = depth;
 
-                        depth = (depth + 1.0f) * 0.5f * 255.0f;
-                        image.set(x, y, TGAColor(depth, depth, depth, 255));
+                        Vec2f uvA = { uv[0].x * diffuseWidth, (1.0f - uv[0].y) * diffuseHeight };
+                        Vec2f uvB = { uv[1].x * diffuseWidth, (1.0f - uv[1].y) * diffuseHeight };
+                        Vec2f uvC = { uv[2].x * diffuseWidth, (1.0f - uv[2].y) * diffuseHeight };
+
+                        Vec2f currentPixelUV = uvA * sigma + uvB * alpha + uvC * beta;
+
+                        TGAColor sampledColor = diffuseMap.get(currentPixelUV.x, currentPixelUV.y);
+
+                        depth = (depth + 1.0f) * 0.5f;
+
+                        output.set(x, y, sampledColor);
                     }
                 }
             }
@@ -144,20 +159,30 @@ int main(int argc, char** argv)
 
     float* depthBuffer = new float[windowWidth * windowHeight];
     for (int i = 0; i < windowHeight * windowWidth; ++i)
-        depthBuffer[i] = -1000000000.0f;
+        depthBuffer[i] = -std::numeric_limits<float>::max();
 
     TGAImage image(windowWidth, windowHeight, TGAImage::RGB);
 
     Model model("african_head.obj");
+    TGAImage diffuseMap;
+    if (!diffuseMap.read_tga_file("african_head_diffuse.tga"))
+    {
+        std::cerr << "Couldn't read diffuse map" << std::endl;
+        return 1;
+    }
 
     Vec3f lightDirection = { 0.f, 0.f, -1};
 
     for (int i = 0; i < model.nfaces(); i++) {
-        std::vector<int> face = model.face(i);
+        std::vector<VertexInfo> face = model.face(i);
         Vec3f screen_coords[3];
         Vec3f world_coords[3];
+        Vec2f uv[3];
+
         for (int j = 0; j < 3; j++) {
-            Vec3f vertex = model.vert(face[j]);
+            Vec3f vertex = model.vert(face[j].VertexId);
+            uv[j] = model.uv(face[j].TexCoordId);
+
             screen_coords[j] = Vec3f((vertex.x + 1.) * windowWidth / 2., (vertex.y + 1.) * windowHeight/ 2., vertex.z);
             world_coords[j] = vertex;
         }
@@ -167,7 +192,7 @@ int main(int argc, char** argv)
 
         float lightIntensity = normal * lightDirection;
         if (lightIntensity > 0.0f)
-            triangle(screen_coords, depthBuffer, image, TGAColor(255 * lightIntensity, 255 * lightIntensity, 255 * lightIntensity, 255));
+            triangle(screen_coords, uv, depthBuffer, diffuseMap, image);
     }
 
     image.flip_vertically();

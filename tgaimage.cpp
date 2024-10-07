@@ -3,7 +3,21 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <algorithm>
 #include "tgaimage.h"
+
+TGAColor TGAColor::operator*(float factor)
+{
+	return TGAColor(std::clamp(factor * r, 0.0f, 255.0f),
+					std::clamp(factor * g, 0.0f, 255.0f),
+					std::clamp(factor * b, 0.0f, 255.0f),
+					255);
+}
+
+TGAColor TGAColor::operator+(const TGAColor& color)
+{
+	return TGAColor(r + color.r, g + color.g, b + color.b, 255);
+}
 
 TGAImage::TGAImage() : data(NULL), width(0), height(0), bytespp(0) {
 }
