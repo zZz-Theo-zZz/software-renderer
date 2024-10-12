@@ -147,12 +147,9 @@ void triangle(Vertex vertices[3], Model& model, float* depthBuffer, Vec3f lightD
 
                         float light = pixelNormal * lightDirection;
                         TGAColor diffuse = model.diffuse(currentPixelUV);
-                        //TGAColor normalSampleColor(pixelNormal.x * 255, pixelNormal.y * 255, pixelNormal.z * 255, 255);
 
-                        //float depthColor = (depth + 1) * 0.5f;
-                        //TGAColor depthSampleColor(depthColor * 255, depthColor * 255, depthColor * 255, 255);
-
-                        output.set(x, y, diffuse * light);
+                        if (light > 0.0f)
+                            output.set(x, y, diffuse * light);
                     }
                 }
             }
