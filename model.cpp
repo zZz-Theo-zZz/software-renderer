@@ -5,9 +5,13 @@
 #include <vector>
 #include "model.h"
 
-Model::Model(const char *filename) : verts_(), faces_() {
+Model::Model(const char *filename) : verts_(), faces_(), diffuseLoaded_(false) {
     std::ifstream in;
-    in.open (filename, std::ifstream::in);
+
+    std::string path = filename;
+    path.append(".obj");
+
+    in.open (path.c_str(), std::ifstream::in);
     if (in.fail()) return;
     std::string line;
     while (!in.eof()) {
@@ -24,9 +28,10 @@ Model::Model(const char *filename) : verts_(), faces_() {
             VertexInfo vertex;
             int itrash;
             iss >> trash;
-            while (iss >> vertex.VertexId >> trash >> vertex.TexCoordId >> trash >> itrash) {
+            while (iss >> vertex.VertexId >> trash >> vertex.TexCoordId >> trash >> vertex.NormalId) {
                 vertex.VertexId--; // in wavefront obj all indices start at 1, not zero
                 vertex.TexCoordId--;
+                vertex.NormalId--;
                 f.push_back(vertex);
             }
             faces_.push_back(f);
@@ -37,9 +42,30 @@ Model::Model(const char *filename) : verts_(), faces_() {
             iss >> uv.y;
 
             uv_.push_back(uv);
+        } else if (!line.compare(0, 3, "vn ")) {
+            iss >> trash;
+            iss >> trash;
+
+            Vec3f normal;
+            iss >> normal.x;
+            iss >> normal.y;
+            iss >> normal.z;
+
+            normals_.push_back(normal);
         }
     }
     std::cerr << "# v# " << verts_.size() << "# uv# " << uv_.size() << " f# " << faces_.size() << std::endl;
+
+
+    std::string diffusePath = filename;
+    diffusePath.append("_diffuse.tga");
+
+    diffuseLoaded_ = true;
+    if (!diffuse_.read_tga_file(diffusePath.c_str()))
+    {
+        std::cerr << "Couldn't read diffuse map " << diffusePath << std::endl;
+        diffuseLoaded_ = false;
+    }
 }
 
 Model::~Model() {
@@ -69,5 +95,15 @@ Vec3f Model::vert(int i) {
 Vec2f Model::uv(int i)
 {
     return uv_[i];
+}
+
+Vec3f Model::normal(int i)
+{
+    return normals_[i];
+}
+
+TGAColor Model::diffuse(Vec2f uv)
+{
+    return diffuse_.get((int)(uv.x * diffuse_.get_width()), (int)((1.0f - uv.y) * diffuse_.get_height()));
 }
 

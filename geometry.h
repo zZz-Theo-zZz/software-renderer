@@ -2,6 +2,7 @@
 #define __GEOMETRY_H__
 
 #include <cmath>
+#include <ostream>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -37,10 +38,23 @@ template <class t> struct Vec3 {
 	template <class > friend std::ostream& operator<<(std::ostream& s, Vec3<t>& v);
 };
 
+template <class t> struct Vec4 {
+	union {
+		struct { t x, y, z, w; };
+		t raw[4];
+	};
+
+	Vec4() : x(0), y(0), z(0), w(0) {}
+	Vec4(const Vec3<t>& vec) : x(vec.x), y(vec.y), z(vec.z), w(1) {}
+	Vec4(t x, t y, t z, t w) : x(x), y(y), z(z), w(w) {}
+	template <class > friend std::ostream& operator<<(std::ostream& s, Vec4<t>& v);
+};
+
 typedef Vec2<float> Vec2f;
 typedef Vec2<int>   Vec2i;
 typedef Vec3<float> Vec3f;
 typedef Vec3<int>   Vec3i;
+typedef Vec4<float> Vec4f;
 
 template <class t> std::ostream& operator<<(std::ostream& s, Vec2<t>& v) {
 	s << "(" << v.x << ", " << v.y << ")\n";
@@ -49,6 +63,12 @@ template <class t> std::ostream& operator<<(std::ostream& s, Vec2<t>& v) {
 
 template <class t> std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
 	s << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
+	return s;
+}
+
+template <class t> std::ostream& operator<<(std::ostream& s, Vec4<t>& v)
+{
+	s << "(" << v.x << ", " << v.y << ", " << v.z << ", " << v.w << ")\n";
 	return s;
 }
 
