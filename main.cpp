@@ -141,15 +141,17 @@ void triangle(Vertex vertices[3], Model& model, float* depthBuffer, Vec3f lightD
                     {
                         depthBuffer[y * width + x] = depth;
 
-                        Vec2f currentPixelUV = vertices[0].UV * sigma + vertices[1].UV * alpha + vertices[2].UV * beta;
                         Vec3f pixelNormal = vertices[0].Normal * sigma + vertices[1].Normal * alpha + vertices[2].Normal * beta;
                         pixelNormal.normalize();
-
                         float light = pixelNormal * lightDirection;
-                        TGAColor diffuse = model.diffuse(currentPixelUV);
 
                         if (light > 0.0f)
+                        {
+                            Vec2f currentPixelUV = vertices[0].UV * sigma + vertices[1].UV * alpha + vertices[2].UV * beta;
+                            TGAColor diffuse = model.diffuse(currentPixelUV);
+
                             output.set(x, y, diffuse * light);
+                        }
                     }
                 }
             }
@@ -159,31 +161,32 @@ void triangle(Vertex vertices[3], Model& model, float* depthBuffer, Vec3f lightD
 
 int main(int argc, char** argv)
 {
-    const int windowWidth = 2000;
-    const int windowHeight = 2000;
+    const int windowWidth = 800;
+    const int windowHeight = 800;
 
-    float c = 5.0f;
-    float projectionData[16] = {
-            1.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, -1.0f / c, 1.0f
-    };
+    Vec3f lightDirection = { 1.f, -1.f, 1.f };
+    lightDirection.normalize();
 
-    float modelMatrixData[16] =
-    {
-            1.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, -1.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-    };
+    Vec3f cameraPos(1.f, 1.f, 3.f);
+    Vec3f target(0.f, 0.f, 0.f);
+    Vec3f up(0.f, 1.f, 0.f);
 
-    Mat4 projectionMatrix(projectionData);
-    Mat4 modelMatrix(modelMatrixData);
+    float depth = (cameraPos - target).norm();
+
+    Mat4 projection = Mat4::GetProjection(depth);
+    Mat4 viewport = Mat4::GetViewport(windowWidth / 8, windowHeight / 8, windowWidth * 3 / 4, windowHeight * 3 / 4, 255.f);
+    Mat4 view = Mat4::LookAt(cameraPos, target, up);
+    Mat4 modelMatrix;
+
+    std::cerr << view << std::endl;
+    std::cerr << projection << std::endl;
+    std::cerr << viewport << std::endl;
+    Mat4 z = (viewport * projection * view);
+    std::cerr << z << std::endl;
 
     float* depthBuffer = new float[windowWidth * windowHeight];
     for (int i = 0; i < windowHeight * windowWidth; ++i)
-        depthBuffer[i] = -std::numeric_limits<float>::max();
+        depthBuffer[i] = std::numeric_limits<float>::lowest();
 
     TGAImage output(windowWidth, windowHeight, TGAImage::RGB);
 
@@ -194,38 +197,50 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Vec3f lightDirection = { 0.f, 0.f, 1.0f};
-
     Vertex vertices[3];
     for (int i = 0; i < model.nfaces(); i++) 
     {
         std::vector<VertexInfo> face = model.face(i);
-        Vec3f screen_coords[3];
-        Vec3f world_coords[3];
 
         for (int j = 0; j < 3; j++) 
         {
             Vec3f vertex = model.vert(face[j].VertexId);
-            Vec4f projectedCoords = projectionMatrix * modelMatrix * Vec4f(vertex);
+            Vec4f projectedCoords = viewport * projection * view * modelMatrix * Vec4f(vertex);
 
-            screen_coords[j] = Vec3f(projectedCoords.x / projectedCoords.w, projectedCoords.y / projectedCoords.w, vertex.z);
-            screen_coords[j] = Vec3f((screen_coords[j].x + 1.f) * windowWidth / 2.f, (screen_coords[j].y + 1.f) * windowHeight / 2.f, vertex.z);
-            
-            world_coords[j] = vertex;
-
-            vertices[j].Pos = screen_coords[j];
+            vertices[j].Pos = Vec3f(projectedCoords.x / projectedCoords.w, projectedCoords.y / projectedCoords.w, projectedCoords.z / projectedCoords.w);
             vertices[j].UV = model.uv(face[j].TexCoordId);
             vertices[j].Normal = model.normal(face[j].NormalId);
         }
-
-        Vec3f normal = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
-        normal.normalize();
 
         triangle(vertices, model, depthBuffer, lightDirection, output);
     }
 
     output.flip_vertically();
     output.write_tga_file("output.tga");
+
+
+    TGAImage zbuffer(windowWidth, windowHeight, TGAImage::RGB);
+
+    float min = 100;
+    float max = -100;
+
+    for (int y = 0; y < windowHeight; ++y)
+    {
+        for (int x = 0; x < windowWidth; ++x)
+        {
+            float depth = depthBuffer[windowWidth * y + x];
+            if (depth < min)
+                min = depth;
+
+            if (depth > max)
+                max = depth;
+
+            zbuffer.set(x, y, TGAColor(depth, depth, depth, 255));
+        }
+    }
+
+    zbuffer.flip_vertically();
+    zbuffer.write_tga_file("depthbuffer.tga");
 
     delete[] depthBuffer;
     return 0;

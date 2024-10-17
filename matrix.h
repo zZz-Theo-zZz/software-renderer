@@ -4,7 +4,9 @@
 #include <ostream>
 
 template <class t> struct Vec4;
+template <class t> struct Vec3;
 typedef Vec4<float> Vec4f;
+typedef Vec3<float> Vec3f;
 
 class Mat4
 {
@@ -43,9 +45,19 @@ public:
 		return data[y * 4 + x];
 	}
 
+	void MoveTo(const Vec3f& pos);
+
+	void Scale(const Vec3f& scale);
+
 	Vec4f operator*(const Vec4f& vec);
 
 	Mat4 operator*(const Mat4& mat);
+
+	static Mat4 GetViewport(int x, int y, int w, int h, float depth);
+
+	static Mat4 GetProjection(float center);
+
+	static Mat4 LookAt(const Vec3f& position, const Vec3f& target, const Vec3f& up);
 };
 
 std::ostream& operator<<(std::ostream& s, Mat4& m);
