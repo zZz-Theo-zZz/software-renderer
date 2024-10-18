@@ -49,9 +49,9 @@ public:
 
 	void Scale(const Vec3f& scale);
 
-	Vec4f operator*(const Vec4f& vec);
+	Vec4f operator*(const Vec4f& vec) const;
 
-	Mat4 operator*(const Mat4& mat);
+	Mat4 operator*(const Mat4& mat) const;
 
 	static Mat4 GetViewport(int x, int y, int w, int h, float depth);
 

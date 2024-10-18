@@ -26,7 +26,6 @@ Model::Model(const char *filename) : verts_(), faces_(), diffuseLoaded_(false) {
         } else if (!line.compare(0, 2, "f ")) {
             std::vector<VertexInfo> f;
             VertexInfo vertex;
-            int itrash;
             iss >> trash;
             while (iss >> vertex.VertexId >> trash >> vertex.TexCoordId >> trash >> vertex.NormalId) {
                 vertex.VertexId--; // in wavefront obj all indices start at 1, not zero

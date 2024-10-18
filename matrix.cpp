@@ -16,7 +16,7 @@ void Mat4::Scale(const Vec3f& scale)
 	Set(2, 2, scale.z);
 }
 
-Vec4f Mat4::operator*(const Vec4f& vec)
+Vec4f Mat4::operator*(const Vec4f& vec) const
 {
 	Vec4f result;
 	for (int y = 0; y < 4; ++y)
@@ -30,7 +30,7 @@ Vec4f Mat4::operator*(const Vec4f& vec)
 	return result;
 }
 
-Mat4 Mat4::operator*(const Mat4& mat)
+Mat4 Mat4::operator*(const Mat4& mat) const
 {
 	Mat4 result;
 	for (int x = 0; x < 4; ++x)
