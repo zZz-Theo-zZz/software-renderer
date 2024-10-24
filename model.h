@@ -20,9 +20,12 @@ private:
 	std::vector<Vec3f> normals_;
 
 	TGAImage diffuse_;
+	TGAImage normal_;
+
 	bool diffuseLoaded_;
+	bool normalLoaded_;
 public:
-	Model(const char *filename);
+	Model(const char* filename);
 	~Model();
 	int nverts();
 	int nfaces();
@@ -33,7 +36,9 @@ public:
 	std::vector<VertexInfo> face(int idx);
 
 	bool diffuseLoaded() const { return diffuseLoaded_; }
+	bool normalLoaded() const { return normalLoaded_; }
 	TGAColor diffuse(Vec2f uv);
+	Vec3f normal(Vec2f uv);
 };
 
 #endif //__MODEL_H__

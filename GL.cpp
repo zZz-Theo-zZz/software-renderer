@@ -122,6 +122,11 @@ Vec3f perspectiveProject(const Vec4f& vec)
 
 void GraphicsLibrary::Triangle(Vertex vertices[3], Model& model, IShader& shader, Vec3f lightDirection)
 {
+    shader.GL = this;
+
+    if (vertices[2].Pos.y == vertices[0].Pos.y)
+        std::swap(vertices[0], vertices[1]);
+
     Vec2i min, max;
     Vec3f a = perspectiveProject(shader.VertexStage(vertices[0], 0));
     Vec3f b = perspectiveProject(shader.VertexStage(vertices[1], 1));
@@ -131,9 +136,6 @@ void GraphicsLibrary::Triangle(Vertex vertices[3], Model& model, IShader& shader
     int height = Output.get_height();
 
     boundingbox(a, b, c, { width, height }, min, max);
-
-    if (c.y == a.y)
-        std::swap(a, b);
 
     float alphaDenominator = ((b.y - a.y) * (c.x - a.x) - (b.x - a.x) * (c.y - a.y));
     float betaDenominator = (c.y - a.y);

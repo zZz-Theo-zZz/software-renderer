@@ -1,6 +1,7 @@
 #include "matrix.h"
 #include "geometry.h"
 #include <ostream>
+#include <iostream>
 
 void Mat4::MoveTo(const Vec3f& pos)
 {
@@ -47,6 +48,127 @@ Mat4 Mat4::operator*(const Mat4& mat) const
 	}
 
 	return result;
+}
+
+float Mat3::Determinant() const
+{
+	return Get(0, 0) * Get(1, 1) * Get(2, 2) +
+		   Get(1, 0) * Get(2, 1) * Get(0, 2) +
+		   Get(2, 0) * Get(0, 1) * Get(1, 2) -
+		   Get(2, 0) * Get(1, 1) * Get(0, 2) -
+		   Get(1, 0) * Get(0, 1) * Get(2, 2) -
+		   Get(0, 0) * Get(2, 1) * Get(1, 2);
+}
+
+float Mat3::Get(int x, int y) const
+{
+	return data[y * 3 + x];
+}
+
+void Mat3::Set(int x, int y, float value)
+{
+	data[y * 3 + x] = value;
+}
+
+void Mat3::Dump()
+{
+	for (int y = 0; y < 3; ++y)
+	{
+		std::cout << "| ";
+		for (int x = 0; x < 3; ++x)
+		{
+			std::cout << Get(x, y) << " | ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+Mat3 Cofactor(int column, int line, const Mat4& mat)
+{
+	Mat3 ret;
+	int i = 0;
+
+	for (int y = 0; y < 4; ++y)
+	{
+		if (y != line)
+		{
+			for (int x = 0; x < 4; ++x)
+			{
+				if (x != column)
+				{
+					ret.data[i] = mat.Get(x, y);
+					++i;
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+
+float Mat4::Determinant() const
+{
+	float ret = 0.0f;
+	float sign = 1.0;
+	for (int i = 0; i < 4; ++i)
+	{
+		float value = sign * Get(0, i) * Cofactor(0, i, *this).Determinant();
+		ret += value;
+		sign *= -1.0f;
+	}
+
+	return ret;
+}
+
+float sign(int i)
+{
+	if (i % 2 == 0)
+		return 1.0f;
+	else
+		return -1.0f;
+}
+
+Mat4 Mat4::Inverse() const
+{
+	float determinant = Determinant();
+	
+	Mat4 mat;
+
+	for (int y = 0; y < 4; ++y)
+	{
+		for (int x = 0; x < 4; ++x)
+		{
+			mat.Set(x, y, sign(x + y) * Cofactor(x, y, *this).Determinant());
+		}
+	}
+
+	mat = Transpose(mat);
+
+	for (int y = 0; y < 4; ++y)
+	{
+		for (int x = 0; x < 4; ++x)
+		{
+			mat.Set(x, y, mat.Get(x, y) / determinant);
+		}
+	}
+	
+	return mat;
+}
+
+Mat4 Mat4::Transpose(const Mat4& mat)
+{
+	Mat4 res;
+
+	for (int y = 0; y < 4; ++y)
+	{
+		for (int x = 0; x < 4; ++x)
+		{
+			res.Set(y, x, mat.Get(x, y));
+		}
+	}
+
+	return res;
 }
 
 Mat4 Mat4::GetViewport(int x, int y, int w, int h, float depth)

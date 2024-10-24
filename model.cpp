@@ -65,6 +65,15 @@ Model::Model(const char *filename) : verts_(), faces_(), diffuseLoaded_(false) {
         std::cerr << "Couldn't read diffuse map " << diffusePath << std::endl;
         diffuseLoaded_ = false;
     }
+
+    std::string normalPath = filename;
+    normalPath.append("_normal.tga");
+    normalLoaded_ = true;
+    if (!normal_.read_tga_file(normalPath.c_str()))
+    {
+        std::cerr << "Couldn't read normal map " << normalPath << std::endl;
+        normalLoaded_ = false;
+    }
 }
 
 Model::~Model() {
@@ -104,5 +113,15 @@ Vec3f Model::normal(int i)
 TGAColor Model::diffuse(Vec2f uv)
 {
     return diffuse_.get((int)(uv.x * diffuse_.get_width()), (int)((1.0f - uv.y) * diffuse_.get_height()));
+}
+
+Vec3f Model::normal(Vec2f uv)
+{
+    TGAColor color = normal_.get((int)(uv.x * normal_.get_width()), (int)((1.0f - uv.y) * normal_.get_height()));
+
+    Vec3f vec = { (float)color.r, (float)color.g, (float)color.b };
+    vec.normalize();
+
+    return vec;
 }
 

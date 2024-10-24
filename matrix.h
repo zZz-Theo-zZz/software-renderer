@@ -8,6 +8,25 @@ template <class t> struct Vec3;
 typedef Vec4<float> Vec4f;
 typedef Vec3<float> Vec3f;
 
+class Mat3
+{
+public:
+	float data[9];
+
+	Mat3()
+	{
+		for (int i = 0; i < 9; ++i)
+			data[i] = 0;
+	}
+
+	float Determinant() const;
+
+	float Get(int x, int y) const;
+	void Set(int x, int y, float value);
+
+	void Dump();
+};
+
 class Mat4
 {
 public:
@@ -52,6 +71,12 @@ public:
 	Vec4f operator*(const Vec4f& vec) const;
 
 	Mat4 operator*(const Mat4& mat) const;
+
+	float Determinant() const;
+
+	Mat4 Inverse() const;
+
+	static Mat4 Transpose(const Mat4& mat);
 
 	static Mat4 GetViewport(int x, int y, int w, int h, float depth);
 

@@ -39,8 +39,7 @@ public:
 
 struct IShader
 {
-    const GraphicsLibrary& GL;
-    IShader(const GraphicsLibrary& glContext) : GL(glContext) {}
+    GraphicsLibrary* GL;
     virtual ~IShader() {}
     virtual Vec4f VertexStage(const Vertex& vec, int vertexId) = 0;
     virtual bool FragmentStage(const Vec3f& bar, TGAColor& color) = 0;
