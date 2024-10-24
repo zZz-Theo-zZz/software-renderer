@@ -21,9 +21,11 @@ private:
 
 	TGAImage diffuse_;
 	TGAImage normal_;
+	TGAImage specular_;
 
 	bool diffuseLoaded_;
 	bool normalLoaded_;
+	bool specularLoaded_;
 public:
 	Model(const char* filename);
 	~Model();
@@ -37,8 +39,10 @@ public:
 
 	bool diffuseLoaded() const { return diffuseLoaded_; }
 	bool normalLoaded() const { return normalLoaded_; }
+	bool specularLoaded() const { return specularLoaded_; }
 	TGAColor diffuse(Vec2f uv);
 	Vec3f normal(Vec2f uv);
+	float specular(Vec2f uv);
 };
 
 #endif //__MODEL_H__

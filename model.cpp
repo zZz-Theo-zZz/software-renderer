@@ -74,6 +74,15 @@ Model::Model(const char *filename) : verts_(), faces_(), diffuseLoaded_(false) {
         std::cerr << "Couldn't read normal map " << normalPath << std::endl;
         normalLoaded_ = false;
     }
+
+    std::string specularPath = filename;
+    specularPath.append("_spec.tga");
+    specularLoaded_ = true;
+    if (!specular_.read_tga_file(specularPath.c_str()))
+    {
+        std::cerr << "Couldn't read specular map " << specularPath << std::endl;
+        specularLoaded_ = false;
+    }
 }
 
 Model::~Model() {
@@ -123,5 +132,12 @@ Vec3f Model::normal(Vec2f uv)
     vec.normalize();
 
     return vec;
+}
+
+float Model::specular(Vec2f uv)
+{
+    TGAColor color = specular_.get((int)(uv.x * specular_.get_width()), (int)((1.0f - uv.y) * specular_.get_height()));
+
+    return color.b;
 }
 

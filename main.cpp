@@ -1,6 +1,7 @@
 ﻿#include "GL.h"
 #include "matrix.h"
 #include <iostream>
+#include <algorithm>
 #include <cmath>
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
@@ -117,14 +118,19 @@ public:
         Vec3f normal = Vec3f{ tmp.x, tmp.y, tmp.z };
         normal = normal.normalize();
 
-        float intensity = normal * lightDirection;
-        if (intensity > 0.0f)
-        {
-            color = model.diffuse(uv) * intensity;
-            return true;
-        }
+        Vec3f r = (normal * (normal * lightDirection * 2.0f) - lightDirection).normalize();
+        
+        float specular = std::pow(std::max(r.y, 0.0f), model.specular(uv));
 
-        return false;
+        float diffuse = std::max(0.f, normal * lightDirection);
+        TGAColor ambientColor = TGAColor(0, 0 ,0, 255);
+
+        TGAColor diffuseColor = model.diffuse(uv);
+
+        for (int i = 0; i < 3; ++i)
+            color.raw[i] = std::min((int)(ambientColor.raw[i] + diffuseColor.raw[i] * (diffuse + 0.7f * specular)), 255);
+
+        return true;
     }
 };
 
@@ -151,7 +157,7 @@ int main(int argc, char** argv)
     Mat4 modelMatrix;
 
     Model model("african_head");
-    if (!model.diffuseLoaded() || !model.normalLoaded() || model.nverts() == 0)
+    if (!model.diffuseLoaded() || !model.normalLoaded() || !model.specularLoaded() || model.nverts() == 0)
     {
         std::cerr << "Error while loading model" << std::endl;
         return 1;
